@@ -1,0 +1,603 @@
+---
+title: 'Final Project: EDA'
+author: "Sarah Wright"
+output:
+  word_document: default
+  html_notebook: default
+  pdf_document: default
+class: Data 23100
+---
+
+
+```{r}
+# Clear Workspace
+rm(list = ls()) 
+```
+
+ I would like to see which platforms, languages, tools, and programs are good predictors of a persons longevity in the Data Science field. This project assumes that the longer a person works in Data Science, the more experience they will have coding. Thus, this project will determine which platforms, languages, and other resources are good predictors for the longevity/retention of  a Data Professional. Overall, I hope to answer the question: What should an aspiring Data Scientist student (a person who is learning DS) learn for a long career? In other words, **What are the odds of retention in data science for people who use different platforms, languages, and software ?** 
+
+#step 1: 
+load in the data set
+```{r}
+KaggleOrgin <- read.csv("/Users/sewii/Downloads/All/Classes_FALL2020/⏳CLASSES /Fall_2022 /Data_231/DataSets /kaggle_survey_2021_responses.csv")
+
+library(dplyr)
+```
+
+
+#step 2: 
+review the data set & its contents 
+```{r}
+glimpse(KaggleOrgin)
+head(KaggleOrgin, 10)
+
+```
+#step 3:
+clean the data 
+
+ Since the question of interests is about Data Science, the first step is to filter the variables of interest so that the ones left are only about Data Science and not Machine Learning nor Software Engineering speific. These questions are listed in the reference document included with the data (kaggle_survey_2021_methodology.pdf) along with questions that are not related to the topic of interest. The remaining variables of interest thus far are as follows: 
+```{r}
+KaggleModified <-  KaggleOrgin
+
+KaggleModified  %>% select(Q6, Q2, Q3, Q1, Q4, Q5, Q7_Part_1:Q7_OTHER, Q9_Part_1:Q9_OTHER, Q10_Part_1:Q10_OTHER, Q11, Q12_Part_1:Q12_OTHER, Q14_Part_1:Q14_OTHER, Q25, Q27_A_Part_1:Q27_A_OTHER, Q32_A_Part_1:Q32_A_OTHER, Q34_A_Part_1:Q34_A_OTHER, Q40_Part_1:Q40_OTHER, Q41, Q39_Part_1:Q39_OTHER)
+
+KaggleModified <- cbind(count = 1:25974, KaggleModified)
+```
+
+
+After filtering for variables of interest, we now go into cleaning the data and reorganize it so that we can complete multiple logistic regressions: 
+
+```{r}
+AlmostFinishedKaggle <- KaggleModified
+
+#First I am changing each variable so that if it is blank it is ascribed a value of 0, and if it has a response it is ascribed a value of 1. for example if you know R = 1, no response or no use of R = 0. By making them binary, we can do a logistic regression. 
+
+#Q4, Q5, Q11, #Q25, #Q41,
+#Making the Q6 variable [the lengeth of a career] a binary variable for logistic regression  I consider anything over 10 years to be a long career but this is chosen arbitrarly since the average span of a persons career is around 4.4 according to Forbes 
+AlmostFinishedKaggle$Q6 <- ifelse(AlmostFinishedKaggle$Q6 == "10-20 years"| AlmostFinishedKaggle$Q6 == "20+ years", "Average or Below", "LongCareer")
+
+#sorting Q4 into formally educated and non-formally educated 
+AlmostFinishedKaggle$Q4 <- ifelse(AlmostFinishedKaggle$Q4 == "Bachelor’s degree" | AlmostFinishedKaggle$Q4 == "Master’s degree"| AlmostFinishedKaggle$Q4 == "Doctoral degree"| AlmostFinishedKaggle$Q4 == "Professional doctorate", "Formal Education", "No Formal Education")
+
+#Q7_Part_1:Q7_OTHER, 
+AlmostFinishedKaggle$Q7_Part_1 <- ifelse(AlmostFinishedKaggle$Q7_Part_1 == "", 0, 1)
+AlmostFinishedKaggle$Q7_Part_2 <- ifelse(AlmostFinishedKaggle$Q7_Part_2 == "", 0, 1)
+AlmostFinishedKaggle$Q7_Part_3 <- ifelse(AlmostFinishedKaggle$Q7_Part_3 == "", 0, 1)
+AlmostFinishedKaggle$Q7_Part_4 <- ifelse(AlmostFinishedKaggle$Q7_Part_4 == "", 0, 1)
+AlmostFinishedKaggle$Q7_Part_5 <- ifelse(AlmostFinishedKaggle$Q7_Part_5 == "", 0, 1)
+AlmostFinishedKaggle$Q7_Part_6 <- ifelse(AlmostFinishedKaggle$Q7_Part_6 == "", 0, 1)
+AlmostFinishedKaggle$Q7_Part_7 <- ifelse(AlmostFinishedKaggle$Q7_Part_7 == "", 0, 1)
+AlmostFinishedKaggle$Q7_Part_8 <- ifelse(AlmostFinishedKaggle$Q7_Part_8 == "", 0, 1)
+AlmostFinishedKaggle$Q7_Part_9 <- ifelse(AlmostFinishedKaggle$Q7_Part_9 == "", 0, 1)
+AlmostFinishedKaggle$Q7_Part_10 <- ifelse(AlmostFinishedKaggle$Q7_Part_10 == "", 0, 1)
+AlmostFinishedKaggle$Q7_Part_11 <- ifelse(AlmostFinishedKaggle$Q7_Part_11 == "", 0, 1)
+AlmostFinishedKaggle$Q7_Part_12 <- ifelse(AlmostFinishedKaggle$Q7_Part_12 == "", 0, 1)
+AlmostFinishedKaggle$Q7_OTHER <- ifelse(AlmostFinishedKaggle$Q7_OTHER == "", 0, 1)
+#Q9_Part_1:Q9_OTHER,
+AlmostFinishedKaggle$Q9_Part_1 <- ifelse(AlmostFinishedKaggle$Q9_Part_1 == "", 0, 1)
+AlmostFinishedKaggle$Q9_Part_2 <- ifelse(AlmostFinishedKaggle$Q9_Part_2 == "", 0, 1)
+AlmostFinishedKaggle$Q9_Part_3 <- ifelse(AlmostFinishedKaggle$Q9_Part_3 == "", 0, 1)
+AlmostFinishedKaggle$Q9_Part_4 <- ifelse(AlmostFinishedKaggle$Q9_Part_4 == "", 0, 1)
+AlmostFinishedKaggle$Q9_Part_5 <- ifelse(AlmostFinishedKaggle$Q9_Part_5 == "", 0, 1)
+AlmostFinishedKaggle$Q9_Part_6 <- ifelse(AlmostFinishedKaggle$Q9_Part_6 == "", 0, 1)
+AlmostFinishedKaggle$Q9_Part_7 <- ifelse(AlmostFinishedKaggle$Q9_Part_7 == "", 0, 1)
+AlmostFinishedKaggle$Q9_Part_8 <- ifelse(AlmostFinishedKaggle$Q9_Part_8 == "", 0, 1)
+AlmostFinishedKaggle$Q9_Part_9 <- ifelse(AlmostFinishedKaggle$Q9_Part_9 == "", 0, 1)
+AlmostFinishedKaggle$Q9_Part_10 <- ifelse(AlmostFinishedKaggle$Q9_Part_10 == "", 0, 1)
+AlmostFinishedKaggle$Q9_Part_11 <- ifelse(AlmostFinishedKaggle$Q9_Part_11 == "", 0, 1)
+AlmostFinishedKaggle$Q9_Part_12 <- ifelse(AlmostFinishedKaggle$Q9_Part_12 == "", 0, 1)
+AlmostFinishedKaggle$Q9_OTHER <- ifelse(AlmostFinishedKaggle$Q9_OTHER == "", 0, 1)
+#Q10_Part_1:Q10_OTHER, 
+AlmostFinishedKaggle$Q10_Part_1 <- ifelse(AlmostFinishedKaggle$Q10_Part_1 == "", 0, 1)
+AlmostFinishedKaggle$Q10_Part_2 <- ifelse(AlmostFinishedKaggle$Q10_Part_2 == "", 0, 1)
+AlmostFinishedKaggle$Q10_Part_3 <- ifelse(AlmostFinishedKaggle$Q10_Part_3 == "", 0, 1)
+AlmostFinishedKaggle$Q10_Part_4 <- ifelse(AlmostFinishedKaggle$Q10_Part_4 == "", 0, 1)
+AlmostFinishedKaggle$Q10_Part_5 <- ifelse(AlmostFinishedKaggle$Q10_Part_5 == "", 0, 1)
+AlmostFinishedKaggle$Q10_Part_6 <- ifelse(AlmostFinishedKaggle$Q10_Part_6 == "", 0, 1)
+AlmostFinishedKaggle$Q10_Part_7 <- ifelse(AlmostFinishedKaggle$Q10_Part_7 == "", 0, 1)
+AlmostFinishedKaggle$Q10_Part_8 <- ifelse(AlmostFinishedKaggle$Q10_Part_8 == "", 0, 1)
+AlmostFinishedKaggle$Q10_Part_9 <- ifelse(AlmostFinishedKaggle$Q10_Part_9 == "", 0, 1)
+AlmostFinishedKaggle$Q10_Part_10 <- ifelse(AlmostFinishedKaggle$Q10_Part_10 == "", 0, 1)
+AlmostFinishedKaggle$Q10_Part_11 <- ifelse(AlmostFinishedKaggle$Q10_Part_11 == "", 0, 1)
+AlmostFinishedKaggle$Q10_Part_12 <- ifelse(AlmostFinishedKaggle$Q10_Part_12 == "", 0, 1)
+AlmostFinishedKaggle$Q10_Part_13 <- ifelse(AlmostFinishedKaggle$Q10_Part_13 == "", 0, 1)
+AlmostFinishedKaggle$Q10_Part_14 <- ifelse(AlmostFinishedKaggle$Q10_Part_14 == "", 0, 1)
+AlmostFinishedKaggle$Q10_Part_15 <- ifelse(AlmostFinishedKaggle$Q10_Part_15 == "", 0, 1)
+AlmostFinishedKaggle$Q10_Part_16 <- ifelse(AlmostFinishedKaggle$Q10_Part_16 == "", 0, 1)
+AlmostFinishedKaggle$Q10_OTHER <- ifelse(AlmostFinishedKaggle$Q10_OTHER == "", 0, 1)
+#Q12_Part_1:Q12_OTHER, 
+AlmostFinishedKaggle$Q12_Part_1 <- ifelse(AlmostFinishedKaggle$Q12_Part_1 == "", 0, 1)
+AlmostFinishedKaggle$Q12_Part_2 <- ifelse(AlmostFinishedKaggle$Q12_Part_2 == "", 0, 1)
+AlmostFinishedKaggle$Q12_Part_3 <- ifelse(AlmostFinishedKaggle$Q12_Part_3 == "", 0, 1)
+AlmostFinishedKaggle$Q12_Part_4 <- ifelse(AlmostFinishedKaggle$Q12_Part_4 == "", 0, 1)
+AlmostFinishedKaggle$Q12_Part_5 <- ifelse(AlmostFinishedKaggle$Q12_Part_5 == "", 0, 1)
+AlmostFinishedKaggle$Q12_OTHER <- ifelse(AlmostFinishedKaggle$Q12_OTHER == "", 0, 1)
+#Q14_Part_1:Q14_OTHER, 
+AlmostFinishedKaggle$Q14_Part_1 <- ifelse(AlmostFinishedKaggle$Q14_Part_1 == "", 0, 1)
+AlmostFinishedKaggle$Q14_Part_2 <- ifelse(AlmostFinishedKaggle$Q14_Part_2 == "", 0, 1)
+AlmostFinishedKaggle$Q14_Part_3 <- ifelse(AlmostFinishedKaggle$Q14_Part_3 == "", 0, 1)
+AlmostFinishedKaggle$Q14_Part_4 <- ifelse(AlmostFinishedKaggle$Q14_Part_4 == "", 0, 1)
+AlmostFinishedKaggle$Q14_Part_5 <- ifelse(AlmostFinishedKaggle$Q14_Part_5 == "", 0, 1)
+AlmostFinishedKaggle$Q14_Part_6 <- ifelse(AlmostFinishedKaggle$Q14_Part_6 == "", 0, 1)
+AlmostFinishedKaggle$Q14_Part_7 <- ifelse(AlmostFinishedKaggle$Q14_Part_7 == "", 0, 1)
+AlmostFinishedKaggle$Q14_Part_8 <- ifelse(AlmostFinishedKaggle$Q14_Part_8 == "", 0, 1)
+AlmostFinishedKaggle$Q14_Part_9 <- ifelse(AlmostFinishedKaggle$Q14_Part_9 == "", 0, 1)
+AlmostFinishedKaggle$Q14_Part_10 <- ifelse(AlmostFinishedKaggle$Q14_Part_10 == "", 0, 1)
+AlmostFinishedKaggle$Q14_Part_11 <- ifelse(AlmostFinishedKaggle$Q14_Part_11 == "", 0, 1)
+AlmostFinishedKaggle$Q14_OTHER <- ifelse(AlmostFinishedKaggle$Q14_OTHER == "", 0, 1)
+#Q27_A_Part_1:Q27_A_OTHER, 
+AlmostFinishedKaggle$Q27_A_Part_1 <- ifelse(AlmostFinishedKaggle$Q27_A_Part_1 == "", 0, 1)
+AlmostFinishedKaggle$Q27_A_Part_2 <- ifelse(AlmostFinishedKaggle$Q27_A_Part_2 == "", 0, 1)
+AlmostFinishedKaggle$Q27_A_Part_3 <- ifelse(AlmostFinishedKaggle$Q27_A_Part_3 == "", 0, 1)
+AlmostFinishedKaggle$Q27_A_Part_4 <- ifelse(AlmostFinishedKaggle$Q27_A_Part_4 == "", 0, 1)
+AlmostFinishedKaggle$Q27_A_Part_5 <- ifelse(AlmostFinishedKaggle$Q27_A_Part_5 == "", 0, 1)
+AlmostFinishedKaggle$Q27_A_Part_6 <- ifelse(AlmostFinishedKaggle$Q27_A_Part_6 == "", 0, 1)
+AlmostFinishedKaggle$Q27_A_Part_7 <- ifelse(AlmostFinishedKaggle$Q27_A_Part_7 == "", 0, 1)
+AlmostFinishedKaggle$Q27_A_Part_8 <- ifelse(AlmostFinishedKaggle$Q27_A_Part_8 == "", 0, 1)
+AlmostFinishedKaggle$Q27_A_Part_9 <- ifelse(AlmostFinishedKaggle$Q27_A_Part_9 == "", 0, 1)
+AlmostFinishedKaggle$Q27_A_Part_10 <- ifelse(AlmostFinishedKaggle$Q27_A_Part_10 == "", 0, 1)
+AlmostFinishedKaggle$Q27_A_Part_11 <- ifelse(AlmostFinishedKaggle$Q27_A_Part_11 == "", 0, 1)
+AlmostFinishedKaggle$Q27_A_OTHER <- ifelse(AlmostFinishedKaggle$Q27_A_OTHER == "", 0, 1)
+#Q32_A_Part_1:Q32_A_OTHER, 
+AlmostFinishedKaggle$Q32_A_Part_1 <- ifelse(AlmostFinishedKaggle$Q32_A_Part_1 == "", 0, 1)
+AlmostFinishedKaggle$Q32_A_Part_2 <- ifelse(AlmostFinishedKaggle$Q32_A_Part_2 == "", 0, 1)
+AlmostFinishedKaggle$Q32_A_Part_3 <- ifelse(AlmostFinishedKaggle$Q32_A_Part_3 == "", 0, 1)
+AlmostFinishedKaggle$Q32_A_Part_4 <- ifelse(AlmostFinishedKaggle$Q32_A_Part_4 == "", 0, 1)
+AlmostFinishedKaggle$Q32_A_Part_5 <- ifelse(AlmostFinishedKaggle$Q32_A_Part_5 == "", 0, 1)
+AlmostFinishedKaggle$Q32_A_Part_6 <- ifelse(AlmostFinishedKaggle$Q32_A_Part_6 == "", 0, 1)
+AlmostFinishedKaggle$Q32_A_Part_7 <- ifelse(AlmostFinishedKaggle$Q32_A_Part_7 == "", 0, 1)
+AlmostFinishedKaggle$Q32_A_Part_8 <- ifelse(AlmostFinishedKaggle$Q32_A_Part_8 == "", 0, 1)
+AlmostFinishedKaggle$Q32_A_Part_9 <- ifelse(AlmostFinishedKaggle$Q32_A_Part_9 == "", 0, 1)
+AlmostFinishedKaggle$Q32_A_Part_10 <- ifelse(AlmostFinishedKaggle$Q32_A_Part_10 == "", 0, 1)
+AlmostFinishedKaggle$Q32_A_Part_11 <- ifelse(AlmostFinishedKaggle$Q32_A_Part_11 == "", 0, 1)
+AlmostFinishedKaggle$Q32_A_Part_12 <- ifelse(AlmostFinishedKaggle$Q32_A_Part_12 == "", 0, 1)
+AlmostFinishedKaggle$Q32_A_Part_13 <- ifelse(AlmostFinishedKaggle$Q32_A_Part_13 == "", 0, 1)
+AlmostFinishedKaggle$Q32_A_Part_14 <- ifelse(AlmostFinishedKaggle$Q32_A_Part_14 == "", 0, 1)
+AlmostFinishedKaggle$Q32_A_Part_15 <- ifelse(AlmostFinishedKaggle$Q32_A_Part_15 == "", 0, 1)
+AlmostFinishedKaggle$Q32_A_Part_16 <- ifelse(AlmostFinishedKaggle$Q32_A_Part_16 == "", 0, 1)
+AlmostFinishedKaggle$Q32_A_Part_17 <- ifelse(AlmostFinishedKaggle$Q32_A_Part_17 == "", 0, 1)
+AlmostFinishedKaggle$Q32_A_Part_18 <- ifelse(AlmostFinishedKaggle$Q32_A_Part_18 == "", 0, 1)
+AlmostFinishedKaggle$Q32_A_Part_19 <- ifelse(AlmostFinishedKaggle$Q32_A_Part_19 == "", 0, 1)
+AlmostFinishedKaggle$Q32_A_Part_20 <- ifelse(AlmostFinishedKaggle$Q32_A_Part_20 == "", 0, 1)
+AlmostFinishedKaggle$Q32_A_OTHER <- ifelse(AlmostFinishedKaggle$Q32_A_OTHER == "", 0, 1)
+#Q34_A_Part_1:Q34_A_OTHER,
+AlmostFinishedKaggle$Q34_A_Part_1 <- ifelse(AlmostFinishedKaggle$Q34_A_Part_1 == "", 0, 1)
+AlmostFinishedKaggle$Q34_A_Part_2 <- ifelse(AlmostFinishedKaggle$Q34_A_Part_2 == "", 0, 1)
+AlmostFinishedKaggle$Q34_A_Part_3 <- ifelse(AlmostFinishedKaggle$Q34_A_Part_3 == "", 0, 1)
+AlmostFinishedKaggle$Q34_A_Part_4 <- ifelse(AlmostFinishedKaggle$Q34_A_Part_4 == "", 0, 1)
+AlmostFinishedKaggle$Q34_A_Part_5 <- ifelse(AlmostFinishedKaggle$Q34_A_Part_5 == "", 0, 1)
+AlmostFinishedKaggle$Q34_A_Part_6 <- ifelse(AlmostFinishedKaggle$Q34_A_Part_6 == "", 0, 1)
+AlmostFinishedKaggle$Q34_A_Part_7 <- ifelse(AlmostFinishedKaggle$Q34_A_Part_7 == "", 0, 1)
+AlmostFinishedKaggle$Q34_A_Part_8 <- ifelse(AlmostFinishedKaggle$Q34_A_Part_8 == "", 0, 1)
+AlmostFinishedKaggle$Q34_A_Part_9 <- ifelse(AlmostFinishedKaggle$Q34_A_Part_9 == "", 0, 1)
+AlmostFinishedKaggle$Q34_A_Part_10 <- ifelse(AlmostFinishedKaggle$Q34_A_Part_10 == "", 0, 1)
+AlmostFinishedKaggle$Q34_A_Part_11 <- ifelse(AlmostFinishedKaggle$Q34_A_Part_11 == "", 0, 1)
+AlmostFinishedKaggle$Q34_A_Part_12 <- ifelse(AlmostFinishedKaggle$Q34_A_Part_12 == "", 0, 1)
+AlmostFinishedKaggle$Q34_A_Part_13 <- ifelse(AlmostFinishedKaggle$Q34_A_Part_13 == "", 0, 1)
+AlmostFinishedKaggle$Q34_A_Part_14 <- ifelse(AlmostFinishedKaggle$Q34_A_Part_14 == "", 0, 1)
+AlmostFinishedKaggle$Q34_A_Part_15 <- ifelse(AlmostFinishedKaggle$Q34_A_Part_15 == "", 0, 1)
+AlmostFinishedKaggle$Q34_A_Part_16 <- ifelse(AlmostFinishedKaggle$Q34_A_Part_16 == "", 0, 1)
+AlmostFinishedKaggle$Q34_A_OTHER <- ifelse(AlmostFinishedKaggle$Q34_A_OTHER == "", 0, 1)
+#Q40_Part_1:Q40_OTHER, 
+AlmostFinishedKaggle$Q40_Part_1 <- ifelse(AlmostFinishedKaggle$Q40_Part_1 == "", 0, 1)
+AlmostFinishedKaggle$Q40_Part_2 <- ifelse(AlmostFinishedKaggle$Q40_Part_2 == "", 0, 1)
+AlmostFinishedKaggle$Q40_Part_3 <- ifelse(AlmostFinishedKaggle$Q40_Part_3 == "", 0, 1)
+AlmostFinishedKaggle$Q40_Part_4 <- ifelse(AlmostFinishedKaggle$Q40_Part_4 == "", 0, 1)
+AlmostFinishedKaggle$Q40_Part_5 <- ifelse(AlmostFinishedKaggle$Q40_Part_5 == "", 0, 1)
+AlmostFinishedKaggle$Q40_Part_6 <- ifelse(AlmostFinishedKaggle$Q40_Part_6 == "", 0, 1)
+AlmostFinishedKaggle$Q40_Part_7 <- ifelse(AlmostFinishedKaggle$Q40_Part_7 == "", 0, 1)
+AlmostFinishedKaggle$Q40_Part_8 <- ifelse(AlmostFinishedKaggle$Q40_Part_8 == "", 0, 1)
+AlmostFinishedKaggle$Q40_Part_9 <- ifelse(AlmostFinishedKaggle$Q40_Part_9 == "", 0, 1)
+AlmostFinishedKaggle$Q40_Part_10 <- ifelse(AlmostFinishedKaggle$Q40_Part_10 == "", 0, 1)
+AlmostFinishedKaggle$Q40_Part_11 <- ifelse(AlmostFinishedKaggle$Q40_Part_11 == "", 0, 1)
+AlmostFinishedKaggle$Q40_OTHER <- ifelse(AlmostFinishedKaggle$Q40_OTHER == "", 0, 1)
+#Q39_Part_1:Q39_OTHER
+AlmostFinishedKaggle$Q39_Part_1 <- ifelse(AlmostFinishedKaggle$Q39_Part_1 == "", 0, 1)
+AlmostFinishedKaggle$Q39_Part_2 <- ifelse(AlmostFinishedKaggle$Q39_Part_2 == "", 0, 1)
+AlmostFinishedKaggle$Q39_Part_3 <- ifelse(AlmostFinishedKaggle$Q39_Part_3 == "", 0, 1)
+AlmostFinishedKaggle$Q39_Part_4 <- ifelse(AlmostFinishedKaggle$Q39_Part_4 == "", 0, 1)
+AlmostFinishedKaggle$Q39_Part_5 <- ifelse(AlmostFinishedKaggle$Q39_Part_5 == "", 0, 1)
+AlmostFinishedKaggle$Q39_Part_6 <- ifelse(AlmostFinishedKaggle$Q39_Part_6 == "", 0, 1)
+AlmostFinishedKaggle$Q39_Part_7 <- ifelse(AlmostFinishedKaggle$Q39_Part_7 == "", 0, 1)
+AlmostFinishedKaggle$Q39_Part_8 <- ifelse(AlmostFinishedKaggle$Q39_Part_8 == "", 0, 1)
+AlmostFinishedKaggle$Q39_Part_9 <- ifelse(AlmostFinishedKaggle$Q39_Part_9 == "", 0, 1)
+AlmostFinishedKaggle$Q39_OTHER <- ifelse(AlmostFinishedKaggle$Q39_OTHER == "", 0, 1)
+
+
+```
+Lastly, I am filter the data set so it ONLY includes data and statistical science careers. This includes: "Research Scientist", "Data Scientist", "Data Analyst", "Business Analyst", "Data Engineer", "Statistician", and "DBA/Database Engineer". Because we are not including Machine Learning, Manager careers, nor the indivuals listed as Unemployed, or Students, we can only make predictions about Data & Statistical Science careers.
+
+```{r}
+#Here I am renaming the data set 
+FinalKaggle <- AlmostFinishedKaggle
+FinalKaggle = FinalKaggle[-1, ]
+#this only works when ran twice 
+NewFinal <- FinalKaggle %>% filter(FinalKaggle$Q5 == "Research Scientist" | FinalKaggle$Q5 == "Data Scientist" | FinalKaggle$Q5 == "Data Analyst" | FinalKaggle$Q5 == "Business Analyst" | FinalKaggle$Q5 == "Data Engineer" |FinalKaggle$Q5 == "Statistician" | FinalKaggle$Q5 == "DBA/Database Engineer") %>% select(Q6, Q2,Q1, Q4, Q5, Q7_Part_1:Q7_OTHER, Q9_Part_1:Q9_OTHER, Q10_Part_1:Q10_OTHER, Q11, Q12_Part_1:Q12_OTHER, Q27_A_Part_1:Q27_A_OTHER, Q32_A_Part_1:Q32_A_OTHER, Q34_A_Part_1:Q34_A_OTHER, Q40_Part_1:Q40_OTHER, Q41, Q39_Part_1:Q39_OTHER)
+
+#removing Q14_Part_1:Q14_OTHER,becasue they are speific to Data Visualization and not all Data careers have to visualize. This should not addtect the results 
+#removing q25 becasue income is a confounding variable. Being paid more will make people stay or leave sooner, regardless of the tools 
+
+
+
+
+head(NewFinal, 10)
+#colnames(temp) <- c(count, time , age, gender, country, education, career, experiance, Language_Python,Language_R, Language_SQL, Language_C, Language_Cplusplus, Language_Java ,Language_Javascript, Language_Julia, Language_Swift, Language_Bash, Language_Matlab, Language_None, Language_Other, IDE_Jupyter,  IDE_RStudio ,  IDE_VisualStudio ,  IDE_VSCode   , IDE_PyCharm ,  IDE_Spyder ,  IDE_NotepadPlusPlus ,  IDE_SublimeText ,  IDE_VimEmacs ,  IDE_MATLAB,  IDE_JupyterNotebook, IDE_None, IDE_Other, Notebook_Kaggle , Notebook_Colab, Notebook_Azure, Notebook_PaperspaceGradient , Notebook_BinderJupyterHub,Notebook_CodeOcean,  Notebook_IBMWatsonStudio, Notebook_AmazonEMR , Notebook_GoogleCloud, Notebook_GoogleCloudDatalab, Notebook_DatabricksCollaborative,  Notebook_GoogleCloudDatalab , Notebook_ZeppelinZepl, Notebook_Deepnote , Notebook_Observable, Notebook_None,Notebook_Other, ComputingPlatform, Hardware_NVIDIAGPUs,  Hardware_GoogleCloudTPUs, Hardware_AWSTrainiumChips , Hardware_AWSInferentiaChips, Hardware_None,Hardware_Other)
+```
+
+
+
+#step 4: 
+EDA 
+ 9,585 indivuals completed the survey and meet the critera listed above
+
+```{r}
+#loading in the necessary packages 
+library(mosaic)
+library(Stat2Data)
+library(ggformula)
+library(tidyverse)
+library(dplyr)
+```
+
+Descriptive Statisticts: 
+```{r}
+#Confounding Variables 
+
+ a= tally(Q6 ~ Q2 , data = NewFinal)
+prop.table(a )
+
+b  = tally(Q6 ~ Q1 , data = NewFinal)
+prop.table(b )
+```
+The proportion of men who have been writing code and/or programming for over 10 years [63.9% times] is significantly greater than the proportion of women who have been writing code and/or programming [15.6 times]. This could be explained by the gender gap in STEM careers for males V. non-males. 
+
+Additional, the second proportion table shows that the proportion of people who have been  writing code and/or programming for over 10 years is higher for people between the ages of 22-34 [between 14.6% and 22.3 %] compared to the other ages below 21 and above 34 years old. 
+
+Becaue the Age and Gender play a large role in the skewedness of the data, we need to consider these as part of the results. when we make our conclusions we should mention that the Gender and Age of most of the indivuals in this data set who have been coding for over 10years mostly applys for a young adult male dominated feild. 
+
+```{r}
+
+gf_bar( ~ Q4 , fill = ~ Q6, data = FinalKaggle, position = position_dodge(), xlab = "Education", ylab ="Surveyed Indivuals" )
+```
+This next bar chart tells us that people with formal education tend to have been writing code and/or programming for over 10 years compared to thoes who do not. Thus Formal Education plays a role in the amount of time indivuals in this survey have coding and programming compared to thoes without. 
+
+```{r}
+gf_bar( ~ Q6 , fill = ~ Q5, data = NewFinal, position = position_dodge(), xlab = "Career in Data", ylab ="Surveyed Indivuals" )
+```
+This last bar chart tells us that the amount og time poeple spend coding could be related to speific career paths. Overall, peole with a over 10 years of experiance coding tend to be Data Analyst, or Data Scientist. While indivuals with less than 10 years of coding experiance are in mostly Data Science or Research Scientist. 
+
+Relationships Between Variables: 
+
+This next section of EDA gives more insight into the hardware and programming people use rather than the confounding variables. 
+
+```{r}
+prop.table(tally(Q4~  Q7_Part_1 , data = NewFinal))
+prop.table(tally(Q4~  Q7_Part_2 , data = NewFinal))
+prop.table(tally(Q4~  Q7_Part_3 , data = NewFinal))
+prop.table(tally(Q4~  Q7_Part_4 , data = NewFinal))
+prop.table(tally(Q4~  Q7_Part_5 , data = NewFinal))
+prop.table(tally(Q4~  Q7_Part_6 , data = NewFinal))
+prop.table(tally(Q4~  Q7_Part_7 , data = NewFinal))
+prop.table(tally(Q4~  Q7_Part_8 , data = NewFinal))
+prop.table(tally(Q4~  Q7_Part_9 , data = NewFinal))
+prop.table(tally(Q4~  Q7_Part_10 , data = NewFinal))
+prop.table(tally(Q4~  Q7_Part_11 , data = NewFinal))
+prop.table(tally(Q4~  Q7_Part_12 , data = NewFinal))
+```
+
+
+Models being considered: 
+KaggModel is the first model. It contatins all variables. 
+
+```{r}
+temp <-  NewFinal
+temp$Q6 <- ifelse(temp$Q6 == "Average or Below", 1, 0)
+temp$Q4 <- ifelse(temp$Q4 == "No Formal Education", 1, 0)
+temp$Q11 <- ifelse(temp$Q11 == "A personal computer / desktop"| temp$Q11 == "A laptop"|temp$Q11 == "None"| temp$Q11 == ""  , 1, 0) #things that most people can access freely in the 21st centry. It just needs to be binary 
+
+KaggModel <- glm(Q6~ Q4
++Q7_Part_1+Q7_Part_2+Q7_Part_3+Q7_Part_4+Q7_Part_5+Q7_Part_6+Q7_Part_7+Q7_Part_8+Q7_Part_9+Q7_Part_10+Q7_Part_11+Q7_Part_12+Q7_OTHER + 
+
+Q9_Part_1+Q9_Part_2+Q9_Part_3+Q9_Part_4+Q9_Part_5+Q9_Part_6+Q9_Part_7+Q9_Part_8+Q9_Part_9+Q9_Part_10+Q9_Part_11+Q9_Part_12+Q9_OTHER
+
++Q10_Part_1+Q10_Part_2+Q10_Part_3+Q10_Part_4+Q10_Part_5+Q10_Part_6+Q10_Part_7+Q10_Part_8+Q10_Part_9+Q10_Part_10+Q10_Part_11+Q10_Part_12+Q10_Part_13+Q10_Part_14+Q10_Part_15+Q10_Part_16+Q10_OTHER
+
++Q11
+
++Q12_Part_1+Q12_Part_2+Q12_Part_3+Q12_Part_4+Q12_Part_5+Q12_OTHER
+
++Q27_A_Part_1+Q27_A_Part_2+Q27_A_Part_3+Q27_A_Part_4+Q27_A_Part_5+Q27_A_Part_6+Q27_A_Part_7+Q27_A_Part_8+Q27_A_Part_9+Q27_A_Part_10+Q27_A_Part_11+Q27_A_OTHER
+
++Q32_A_Part_1+Q32_A_Part_2+Q32_A_Part_3+Q32_A_Part_4+Q32_A_Part_5+Q32_A_Part_6+Q32_A_Part_7+Q32_A_Part_8+Q32_A_Part_9+Q32_A_Part_10+Q32_A_Part_11+Q32_A_Part_12+Q32_A_Part_13+Q32_A_Part_14+Q32_A_Part_15+Q32_A_Part_16+Q32_A_Part_17+Q32_A_Part_18+Q32_A_Part_19+Q32_A_Part_20+Q32_A_OTHER
+
++Q34_A_Part_1+Q34_A_Part_2+Q34_A_Part_3+Q34_A_Part_4+Q34_A_Part_5+Q34_A_Part_6+Q34_A_Part_7+Q34_A_Part_8+Q34_A_Part_9+Q34_A_Part_10+Q34_A_Part_11+Q34_A_Part_12+Q34_A_Part_13+Q34_A_Part_14+Q34_A_Part_15+Q34_A_Part_16+Q34_A_OTHER
+
++Q40_Part_1+Q40_Part_2+Q40_Part_3+Q40_Part_4+Q40_Part_5+Q40_Part_6+Q40_Part_7+Q40_Part_8+Q40_Part_9+Q40_Part_10+Q40_Part_11+Q40_OTHER
++Q39_Part_1+Q39_Part_2+Q39_Part_3+Q39_Part_4+Q39_Part_5+Q39_Part_6+Q39_Part_7+Q39_Part_8+Q39_Part_9+Q39_OTHER,data=temp,family=binomial)
+summary(KaggModel)
+```
+
+
+KaggModel2 is the second model. It contatins all variables except for variables that are not significant (pvalues of 0.05 and above) . 
+```{r}
+KaggModel2 <- glm(Q6~ Q4
++Q7_Part_2+Q7_Part_4+Q7_Part_6+Q7_Part_7+Q7_Part_8+Q7_Part_10+Q7_Part_11+Q7_Part_12+Q7_OTHER + 
+
+Q9_Part_1+Q9_Part_2+Q9_Part_3+Q9_Part_4+Q9_Part_5+Q9_Part_6+Q9_Part_7+Q9_Part_8+Q9_Part_9+Q9_OTHER
+
++Q10_Part_2+Q10_Part_5+Q10_Part_6+Q10_Part_7+Q10_Part_13+Q10_Part_16
+
++Q11
+
++Q12_Part_1+Q12_Part_5+Q12_OTHER
+
++Q27_A_Part_1+Q27_A_Part_3+Q27_A_Part_5
+
++Q32_A_Part_1+Q32_A_Part_3+Q32_A_Part_4+Q32_A_Part_6+Q32_A_Part_8+Q32_A_OTHER
+
++Q34_A_Part_5+Q34_A_Part_7+Q34_A_Part_10+Q34_A_Part_11+Q34_A_Part_16+Q34_A_OTHER
+
++Q40_Part_1+Q40_Part_2+Q40_Part_4+Q40_Part_7+Q40_Part_8+Q40_Part_11
++Q39_OTHER,data=temp,family=binomial)
+summary(KaggModel2)
+```
+
+KaggModel3 is the final model. It uses the same method as KaggModel2, contating all variables except for variables that are not significant (pvalues of 0.05 and above) . However, after removing some variables, others became insignificant aswell. In this case they were removed from the data set. 
+
+```{r}
+KaggModel3 <- glm(Q6~ Q4
++Q7_Part_2+Q7_Part_4+Q7_Part_6+Q7_Part_7+Q7_Part_8+Q7_Part_10+Q7_Part_11+Q7_OTHER + 
+
+Q9_Part_2+Q9_Part_3+Q9_Part_4+Q9_Part_5+Q9_Part_6+Q9_Part_7+Q9_Part_8+Q9_Part_9+Q9_OTHER
+
++Q10_Part_5+Q10_Part_6+Q10_Part_7+Q10_Part_13+Q10_Part_16
+
++Q11
+
++Q12_Part_1+Q12_Part_5+Q12_OTHER
+
++Q27_A_Part_1+Q27_A_Part_3+Q27_A_Part_5
+
++Q32_A_Part_1+Q32_A_Part_3+Q32_A_Part_4+Q32_A_Part_6+Q32_A_Part_8+Q32_A_OTHER
+
++Q34_A_Part_5+Q34_A_Part_7+Q34_A_Part_10+Q34_A_Part_11+Q34_A_Part_16+Q34_A_OTHER
+
++Q40_Part_1+Q40_Part_2+Q40_Part_4+Q40_Part_7+Q40_Part_8+Q40_Part_11
++Q39_OTHER,data=temp,family=binomial)
+summary(KaggModel3)
+```
+
+
+To find the most significant perdictors the Wald test is used (refrence Model3's test stats and p-value). There is strong evidence that the variables : Q7_OTHER, Q9_Part_9, and Q11 (pvalue= < 2e-16 which is approximately 0), are the most statistically significant predictor of years coding in the Kaggle survey recipients, once the listed variables (Model3) are already in the model.
+
+The p-value of < 2e-16 or approcimately 0 is telling us that there is a very signficant difference in odds of Q6 between older people the 3 variablesQ7_OTHER, Q9_Part_9, and Q11, even when controlling for the other variables.
+```{r}
+exp(1.08324)
+exp(0.84987)
+exp(0.62246)
+```
+
+The intercept is the “fitted model” when Q7_OTHER =1 and the other variables in the model =0. So when when Q7_Other=1 and the other variables =0, we can write the model as:
+log(odds of survival) = 1.08324
+Thus, we can say that the odds of Q6 for Q7_Other in the Kaggle Dataset who are not meeting the other requirements in the model  is eˆ(1.08324) = 2.954236. Thus, for each Q7_Other without the other variables who Q6 , we expect nearly 3 to Q6.
+
+The intercept is the “fitted model” when Q9_Part_9 =1 and the other variables in the model =0. So when when Q9_Part_9=1 and the other variables =0, we can write the model as:
+log(odds of survival) = 0.84987
+Thus, we can say that the odds of Q6 for Q9_Part_9 in the Kaggle Dataset who are not meeting the other requirements in the model  is eˆ(0.84987) = 2.339343. Thus, for each Q9_Part_9 without the other variables who Q6 , we expect nearly 2 to Q6.
+
+The intercept is the “fitted model” when Q11 =1 and the other variables in the model =0. So when when Q11 =1 and the other variables =0, we can write the model as:
+log(odds of survival) = 0.62246
+Thus, we can say that the odds of Q6 for Q11 in the Kaggle Dataset who are not meeting the other requirements in the model  is eˆ(0.62246) = 1.863507. Thus, for each Q11 without the other variables who Q6 , we expect nearly 2 to Q6.
+
+
+The anova test is to see which model does best against the original model using a drop in deviance. 
+```{r}
+anova(KaggModel3, KaggModel, test="Chisq")
+```
+The p-value of the nested drop-in-deviance test is 0.07712, which is pretty small. This indicates that the reduced model (model2) is not sufficient. That is the removal of the following variables, are a useful addition to the original model.
+However, 
+
+```{r}
+anova(KaggModel2, KaggModel3, test="Chisq")
+```
+The p-value of the next nested drop-in-deviance test is 0.348, which indicates that the reduced model (model3) is sufficient. That is, the variables with pvalues greater than 0.05 were not a useful addition to the model3 shown in figure 3. 
+
+
+
+
+```{r}
+#odds of q6 within each variable 
+
+xtabs(~Q6 + Q4,data=FinalKaggle)
+xtabs(~Q6 + Q39_OTHER,data=FinalKaggle)
+xtabs(~Q6 + Q7_Part_2,data=FinalKaggle)
+xtabs(~Q6 + Q7_Part_4,data=FinalKaggle) 
+xtabs(~Q6 + Q7_Part_6,data=FinalKaggle) 
+xtabs(~Q6 + Q7_Part_7,data=FinalKaggle) 
+xtabs(~Q6 + Q7_Part_8,data=FinalKaggle) 
+xtabs(~Q6 + Q7_Part_10,data=FinalKaggle) 
+xtabs(~Q6 + Q7_Part_11,data=FinalKaggle) 
+xtabs(~Q6 + Q7_OTHER,data=FinalKaggle)
+
+
+xtabs(~Q6 + Q9_Part_2,data=FinalKaggle)  
+xtabs(~Q6+ Q9_Part_3,data=FinalKaggle) 
+xtabs(~Q6+ Q9_Part_4,data=FinalKaggle) 
+xtabs(~Q6+ Q9_Part_5,data=FinalKaggle) 
+xtabs(~Q6+ Q9_Part_6,data=FinalKaggle) 
+xtabs(~Q6+ Q9_Part_7,data=FinalKaggle) 
+xtabs(~Q6+ Q9_Part_8,data=FinalKaggle) 
+xtabs(~Q6 + Q9_Part_9,data=FinalKaggle) 
+xtabs(~Q6+ Q9_OTHER,data=FinalKaggle)
+
+
+xtabs(~Q6+ Q10_Part_5,data=FinalKaggle)
+xtabs(~Q6+ Q10_Part_6,data=FinalKaggle)
+xtabs(~Q6+ Q10_Part_7,data=FinalKaggle)
+xtabs(~Q6+ Q10_Part_13,data=FinalKaggle) 
+xtabs(~Q6+ Q10_Part_16,data=FinalKaggle)
+
+
+xtabs(~Q6 + Q11,data=FinalKaggle)
+xtabs(~Q6 +  Q12_Part_1,data=FinalKaggle) 
+xtabs(~Q6 + Q12_Part_5 ,data=FinalKaggle)
+xtabs(~Q6 + Q12_OTHER,data=FinalKaggle)
+
+xtabs(~Q6 +  Q27_A_Part_1,data=FinalKaggle) 
+xtabs(~Q6 + Q27_A_Part_3,data=FinalKaggle) 
+xtabs(~Q6 + Q27_A_Part_5,data=FinalKaggle)
+
+
+xtabs(~Q6 + Q32_A_Part_1 ,data=FinalKaggle)
+xtabs(~Q6  + Q32_A_Part_3 ,data=FinalKaggle)
+xtabs(~Q6 + Q32_A_Part_4 ,data=FinalKaggle)
+xtabs(~Q6 + Q32_A_Part_6 ,data=FinalKaggle)
+xtabs(~Q6 + Q32_A_Part_8 ,data=FinalKaggle)
+xtabs(~Q6 + Q32_A_OTHER,data=FinalKaggle)
+
+
+xtabs(~Q6 + Q34_A_Part_5 ,data=FinalKaggle)
+xtabs(~Q6 + Q34_A_Part_7 ,data=FinalKaggle)
+xtabs(~Q6 + Q34_A_Part_10 ,data=FinalKaggle)
+xtabs(~Q6 + Q34_A_Part_11 ,data=FinalKaggle)
+xtabs(~Q6 + Q34_A_Part_16 ,data=FinalKaggle)
+xtabs(~Q6 + Q34_A_OTHER,data=FinalKaggle)
+
+
+xtabs(~Q6 +Q40_Part_1 ,data=FinalKaggle)
+xtabs(~Q6  + Q40_Part_2 ,data=FinalKaggle)
+xtabs(~Q6  + Q40_Part_4 ,data=FinalKaggle)
+xtabs(~Q6 + Q40_Part_7 ,data=FinalKaggle)
+xtabs(~Q6 + Q40_Part_8 ,data=FinalKaggle)
+xtabs(~Q6 + Q40_Part_11,data=FinalKaggle)
+```
+
+
+```{r}
+#proportion of q6  
+prop.table(xtabs(~Q6,data=FinalKaggle), 1)
+prop.table(xtabs(~Q6 + Q4,data=FinalKaggle), 1) # 8 v 11
+prop.table(xtabs(~Q6 + Q39_OTHER,data=FinalKaggle), 1) 
+prop.table(xtabs(~Q6 + Q7_Part_2,data=FinalKaggle), 1)
+prop.table(xtabs(~Q6 + Q7_Part_4,data=FinalKaggle), 1) 
+prop.table(xtabs(~Q6 + Q7_Part_6,data=FinalKaggle), 1) 
+prop.table(xtabs(~Q6 + Q7_Part_7,data=FinalKaggle), 1) 
+prop.table(xtabs(~Q6 + Q7_Part_8,data=FinalKaggle), 1) 
+prop.table(xtabs(~Q6 + Q7_Part_10,data=FinalKaggle), 1) 
+prop.table(xtabs(~Q6 + Q7_Part_11,data=FinalKaggle), 1) 
+prop.table(xtabs(~Q6 + Q7_OTHER,data=FinalKaggle), 1)
+
+
+prop.table(xtabs(~Q6 + Q9_Part_2,data=FinalKaggle), 1)  
+prop.table(xtabs(~Q6+ Q9_Part_3,data=FinalKaggle), 1) 
+prop.table(xtabs(~Q6+ Q9_Part_4,data=FinalKaggle), 1) 
+prop.table(xtabs(~Q6+ Q9_Part_5,data=FinalKaggle), 1) 
+prop.table(xtabs(~Q6+ Q9_Part_6,data=FinalKaggle), 1) 
+prop.table(xtabs(~Q6+ Q9_Part_7,data=FinalKaggle), 1) 
+prop.table(xtabs(~Q6+ Q9_Part_8,data=FinalKaggle), 1) 
+prop.table(xtabs(~Q6 + Q9_Part_9,data=FinalKaggle), 1) 
+prop.table(xtabs(~Q6+ Q9_OTHER,data=FinalKaggle), 1)
+
+prop.table(xtabs(~Q6+ Q10_Part_5,data=FinalKaggle), 1)
+prop.table(xtabs(~Q6+ Q10_Part_6,data=FinalKaggle), 1)
+prop.table(xtabs(~Q6+ Q10_Part_7,data=FinalKaggle), 1)
+prop.table(xtabs(~Q6+ Q10_Part_13,data=FinalKaggle), 1) 
+prop.table(xtabs(~Q6+ Q10_Part_16,data=FinalKaggle), 1)
+
+
+prop.table(xtabs(~Q6 + Q11,data=FinalKaggle), 1)
+prop.table(xtabs(~Q6 +  Q12_Part_1,data=FinalKaggle), 1) 
+prop.table(xtabs(~Q6 + Q12_Part_5 ,data=FinalKaggle), 1)
+prop.table(xtabs(~Q6 + Q12_OTHER,data=FinalKaggle), 1)
+
+prop.table(xtabs(~Q6 +  Q27_A_Part_1,data=FinalKaggle), 1) 
+prop.table(xtabs(~Q6 + Q27_A_Part_3,data=FinalKaggle), 1) 
+prop.table(xtabs(~Q6 + Q27_A_Part_5,data=FinalKaggle), 1)
+
+
+prop.table(xtabs(~Q6 + Q32_A_Part_1 ,data=FinalKaggle), 1)
+prop.table(xtabs(~Q6  + Q32_A_Part_3 ,data=FinalKaggle), 1)
+prop.table(xtabs(~Q6 + Q32_A_Part_4 ,data=FinalKaggle), 1)
+prop.table(xtabs(~Q6 + Q32_A_Part_6 ,data=FinalKaggle), 1)
+prop.table(xtabs(~Q6 + Q32_A_Part_8 ,data=FinalKaggle), 1)
+prop.table(xtabs(~Q6 + Q32_A_OTHER,data=FinalKaggle), 1)
+
+prop.table(xtabs(~Q6 + Q34_A_Part_5 ,data=FinalKaggle), 1)
+prop.table(xtabs(~Q6 + Q34_A_Part_7 ,data=FinalKaggle), 1)
+prop.table(xtabs(~Q6 + Q34_A_Part_10 ,data=FinalKaggle), 1)
+prop.table(xtabs(~Q6 + Q34_A_Part_11 ,data=FinalKaggle), 1)
+prop.table(xtabs(~Q6 + Q34_A_Part_16 ,data=FinalKaggle), 1)
+prop.table(xtabs(~Q6 + Q34_A_OTHER,data=FinalKaggle), 1)
+
+
+prop.table(xtabs(~Q6 +Q40_Part_1 ,data=FinalKaggle), 1)
+prop.table(xtabs(~Q6  + Q40_Part_2 ,data=FinalKaggle), 1)
+prop.table(xtabs(~Q6  + Q40_Part_4 ,data=FinalKaggle), 1)
+prop.table(xtabs(~Q6 + Q40_Part_7 ,data=FinalKaggle), 1)
+prop.table(xtabs(~Q6 + Q40_Part_8 ,data=FinalKaggle), 1)
+prop.table(xtabs(~Q6 + Q40_Part_11,data=FinalKaggle), 1)
+```
+
+
+
+Q7_OTHER, Q9_Part_9, and Q11
+
+```{r}
+unique(temp$Q11)
+#proportions of interest: 
+prop.table(xtabs(~Q6 + Q7_OTHER ,data=temp), 1) ####
+prop.table(xtabs(~Q6 + Q9_Part_9 ,data=temp), 1) ###
+prop.table(xtabs(~Q6 + Q11 ,data=temp), 1) ###
+prop.table(xtabs(~Q6 + Q7_Part_10 ,data=temp), 1) #NOPE
+prop.table(xtabs(~Q6 + Q34_A_OTHER ,data=temp), 1) #####
+```
+
+There appears to be a relationship between Q6 and the variables with large pvalues with the exception of Q34_A_OTHER and Q11.
+There does not appear to be a relationship between survival and sex. 80.6% of males survive and 78.9% of females.
+
+```{r}
+exp(confint(KaggModel3))
+```
+
+This means that we are 90% confident that the odds of an older person surviving the ICU are between 10% and 61% the odds of a young person surviving, assuming the same infection status.
+
+Linearity is automatic because age group and infection are both categorical variables. A plot of the empirical logits vs. age group would draw a “line” between young people and middle-aged people, and another line between young people and old people. Since two points always make a line, linearity is met.
+
+```{r}
+newTemp <- KaggleModified  %>% select(Q6, Q4
+        ,Q7_Part_2,Q7_Part_4,Q7_Part_6,Q7_Part_7,Q7_Part_8,Q7_Part_10,Q7_Part_11,Q7_OTHER , 
+                                      
+                                      Q9_Part_2,Q9_Part_3,Q9_Part_4,Q9_Part_5,Q9_Part_6,Q9_Part_7,Q9_Part_8,Q9_Part_9,Q9_OTHER
+                                  
+                                  ,Q10_Part_5,Q10_Part_6,Q10_Part_7,Q10_Part_13,Q10_Part_16
+                                  
+                                  ,Q11
+                                  
+                                  ,Q12_Part_1,Q12_Part_5,Q12_OTHER
+                                  
+                                  ,Q27_A_Part_1,Q27_A_Part_3,Q27_A_Part_5
+                                  
+                                  ,Q32_A_Part_1,Q32_A_Part_3,Q32_A_Part_4,Q32_A_Part_6,Q32_A_Part_8,Q32_A_OTHER
+                                  
+                                  ,Q34_A_Part_5,Q34_A_Part_7,Q34_A_Part_10,Q34_A_Part_11,Q34_A_Part_16,Q34_A_OTHER
+                                  
+                                  ,Q40_Part_1,Q40_Part_2,Q40_Part_4,Q40_Part_7,Q40_Part_8,Q40_Part_11
+                                  ,Q39_OTHER)
+```
+
+
+```{r}
+pred.success.3 <- ifelse(fitted(KaggModel3)>0.5,1,0) 
+tally(~pred.success.3+KaggModel3$y,data=temp, format="proportion")
+
+pred.success.2 <- ifelse(fitted(KaggModel2)>0.5,1,0) 
+tally(~pred.success.2+KaggModel2$y,data=temp, format="proportion")
+
+pred.success.1 <- ifelse(fitted(KaggModel)>0.5,1,0) 
+tally(~pred.success.1+KaggModel$y,data=temp, format="proportion")
+```
+
+Model 3 have the same misclassification rates than the other two models. Model5 has the lowest rate of patients who were predicted to die but actually survived, and Model4 has the lowest % of patients who were predicted to survive but actually died.
+
+
+
